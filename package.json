@@ -1,0 +1,35 @@
+{
+  "name": "@hexlet/code",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "The console page loader",
+  "main": "src/index.js",
+  "bin": {
+    "page-loader": "bin/page-loader.js"
+  },
+  "scripts": {
+    "test": "npx jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/meloshnikov/backend-project-4.git"
+  },
+  "author": "meloshnikov",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/meloshnikov/backend-project-4/issues"
+  },
+  "homepage": "https://github.com/meloshnikov/backend-project-4#readme",
+  "dependencies": {
+    "commander": "^11.0.0"
+  },
+  "devDependencies": {
+    "@jest/globals": "^29.6.2",
+    "eslint": "^8.46.0",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-plugin-import": "^2.28.0",
+    "jest": "^29.6.2",
+    "jest-circus": "^29.6.2",
+    "jest-cli": "^29.6.2"
+  }
+}
