@@ -1,6 +1,9 @@
 import path from 'path';
 import fs from 'fs/promises';
+import debug from 'debug';
 import axios from 'axios';
+import axiosDebugger from './axiosDebugger.js';
+import { logger } from './tools.js'
 import {
   getFileName,
   extractUrlsByTag,
@@ -18,6 +21,7 @@ const loadHtmlPage = async (url, output) => {
   const filesPath = path.join(output, filesDirName);
 
   const downloadedResources = ['img', 'link', 'script'];
+  logger('Loading page', url);
 
   try {
     const page = await axios.get(url);
@@ -32,14 +36,19 @@ const loadHtmlPage = async (url, output) => {
     });
     await writeFile(htmlPath, editedHtml);
   } catch (error) {
-    console.error(`Failed to download the page: ${error.message}`);
+    logger('Failed to download the page');
     throw error;
   }
 };
 
-const downloadPage = async (url, output = process.cwd()) => fs.mkdir(output, { recursive: true })
-  .then(() => loadHtmlPage(url, output))
-  .then(() => console.log('Ok'))
-  .catch((e) => { throw new Error(e); });
+const downloadPage = async (url, output = process.cwd()) => {
+  if (process.env.DEBUG === 'axios') {
+    axiosDebugger(axios, debug);
+  }
+  logger('Creating directory', output);
+  return fs.mkdir(output, { recursive: true })
+    .then(() => loadHtmlPage(url, output))
+    .catch((e) => { throw new Error(e); });
+};
 
 export default downloadPage;

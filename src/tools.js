@@ -1,13 +1,16 @@
 import path from 'path';
+import debug from 'debug';
+import axios from 'axios';
 import fs from 'fs/promises';
 import { load } from 'cheerio';
-import axios from 'axios';
 
 const attrMapper = {
   img: 'src',
   link: 'href',
   script: 'src',
 };
+
+export const logger = debug('page-loader');
 
 export const getFileName = ({ host, pathname }) => (host + pathname).replace(/[^\d+\w]/g, '-');
 
@@ -43,6 +46,7 @@ export const writeFile = async (filePath, data) => {
 };
 
 export const downloadFile = async (fileUrl, filePath) => {
+  logger('Downloading file', fileUrl);
   const { data } = await axios.get(fileUrl, { responseType: 'arraybuffer' });
   return writeFile(filePath, data);
 };
