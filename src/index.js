@@ -1,55 +1,42 @@
-import path from 'path';
-import fs from 'fs/promises';
-import debug from 'debug';
+import 'axios-debug-log';
 import axios from 'axios';
-import axiosDebugger from './axiosDebugger.js';
-import {
-  logger,
-  getFileName,
-  extractUrlsByTag,
-  getPaths,
-  replaceUrls,
-  writeFile,
-  downloadAssets,
-  getFilesDirName,
-} from './tools.js';
+import fsp from 'fs/promises';
+import path from 'path';
+import debug from 'debug';
+import { getFileName, downloadResources } from './tools.js';
 
-const loadHtmlPage = async (url, output) => {
+const logger = debug('page-loader');
+
+const pageLoader = (url, output = process.cwd()) => {
+  logger(`URL: ${url}`);
+  logger(`Download directory: ${output}`);
+
   const { origin } = new URL(url);
-  const fileName = getFileName(url);
-  const filesDirName = getFilesDirName(fileName);
-  const htmlPath = path.join(output, `${fileName}.html`);
-  const filesPath = path.join(output, filesDirName);
 
-  const downloadedResources = ['img', 'link', 'script'];
-  logger('Loading page', url);
+  const nameHtml = getFileName(url, origin);
+  const fullHtmlPath = path.join(output, nameHtml);
 
-  try {
-    const page = await axios.get(url);
-    let editedHtml = page.data;
-    downloadedResources.forEach(async (tag) => {
-      const urls = extractUrlsByTag(page.data, origin, tag);
-      if (urls.length) {
-        const paths = getPaths(urls, filesDirName, filesPath);
-        editedHtml = replaceUrls(editedHtml, tag, paths.relative);
-        await downloadAssets(urls, paths.absolute);
-      }
+  const dirName = getFileName(url, origin).replace('.html', '_files');
+  const fullDirPath = path.join(output, dirName);
+
+  return axios.get(url, {responseType: 'arraybuffer'})
+    .then((response) => {
+      logger('Write downloaded data to file');
+      return fsp.writeFile(fullHtmlPath, response.data);
+    })
+    .then(() => {
+      logger('Create dir if not exist');
+      return fsp.access(fullDirPath)
+        .catch(() => fsp.mkdir(fullDirPath));
+    })
+    .then(() => {
+      logger('Read downloaded file');
+      return fsp.readFile(fullHtmlPath, 'utf-8');
+    })
+    .then((file) => {
+      logger('Download resources');
+      return downloadResources(file, fullDirPath, dirName, fullHtmlPath, origin);
     });
-    await writeFile(htmlPath, editedHtml);
-  } catch (error) {
-    logger('Failed to download the page');
-    throw error;
-  }
 };
 
-const downloadPage = async (url, output = process.cwd()) => {
-  if (process.env.DEBUG === 'axios') {
-    axiosDebugger(axios, debug);
-  }
-  logger('Creating directory', output);
-  return fs.mkdir(output, { recursive: true })
-    .then(() => loadHtmlPage(url, output))
-    .catch((e) => { throw new Error(e); });
-};
-
-export default downloadPage;
+export default pageLoader;

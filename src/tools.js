@@ -1,74 +1,51 @@
 import path from 'path';
-import debug from 'debug';
 import axios from 'axios';
-import fs from 'fs/promises';
+import fsp from 'fs/promises';
 import { load } from 'cheerio';
+import Listr from 'listr';
 
-const attrMapper = {
-  img: 'src',
-  link: 'href',
-  script: 'src',
+const attrMapper = [
+  { tag: 'img', attribute: 'src' },
+  { tag: 'link', attribute: 'href' },
+  { tag: 'script', attribute: 'src' },
+];
+
+export const getFileName = (url, origin) => {
+  const { hostname, pathname } = new URL(url, origin);
+
+  const extension = path.extname(pathname);
+  const pathName = extension ? pathname.split(extension)[0] : pathname;
+
+  const newName = pathName === '/' ? `${hostname}`.replace(/[^a-z0-9]/gm, '-') : `${hostname}${pathName}`.replace(/[^a-z0-9]/gm, '-');
+  return extension ? `${newName}${extension}` : `${newName}.html`;
 };
 
-export const logger = debug('page-loader');
-
-export const getFileName = (url) => {
-  const { host, pathname } = new URL(url);
-  const [path, extension] = pathname.split('.');
-  const fileName = `${host}${path}`.replace(/[^\d+\w]/g, '-');
-  return extension ?  `${fileName}.${extension}` : fileName;
-}
-
-export const getFilesDirName = (fileName) => `${fileName}_files`;
-
-export const getAssetName = (url) => (url ? url.split('-').pop() : undefined);
-
-export const isFile = (url) => url ? getAssetName(url).split('.')[1] : false;
-
-export const getAssetPaths = (urls, output) => urls.map((url) => {
-  const assetName = getFileName(url);
-  return path.join(output, assetName);
-});
-
-export const getPaths = (urls, relativePath, absolutePath) => ({
-  relative: getAssetPaths(urls, relativePath),
-  absolute: getAssetPaths(urls, absolutePath),
-});
-
-export const replaceUrls = (html, tag, replacementPaths) => {
-  console.log('🚀 : replaceUrls : replacementPaths:', replacementPaths);
+export const downloadResources = (html, dirPath, dirN, fullPath, originUrl) => {
   const $ = load(html);
-  const assets = Array.from($(tag));
-  replacementPaths.forEach((replacePath) => {
-    const assetName = getAssetName(replacePath);
-    console.log('🚀 : replacementPaths.forEach : assetName:', assetName);
-    const elements = assets.filter((el) => getAssetName($(el).attr(attrMapper[tag])) === assetName);
-    elements.forEach((element) => $(element).attr(attrMapper[tag], replacePath));
-  });
-  return $.html();
-};
+  const promises = [];
 
-export const writeFile = async (filePath, data) => {
-  await fs.mkdir(path.dirname(filePath), { recursive: true })
-    .then(() => fs.writeFile(filePath, data));
-  return filePath;
-};
+  attrMapper.forEach(({ tag, attribute }) => $(tag).each((_index, el) => {
+    const elem = $(el).attr(attribute);
 
-export const downloadFile = async (fileUrl, filePath) => {
-  logger('Downloading file', fileUrl);
-  const { data } = await axios.get(fileUrl, { responseType: 'arraybuffer' });
-  return writeFile(filePath, data);
-};
+    const url = new URL(elem, originUrl);
+    const { href, origin } = url;
 
-export const downloadAssets = async (urls, absolutePaths) => {
-  await Promise.allSettled(urls.map((url, index) => downloadFile(url, absolutePaths[index])));
-};
+    if (origin === originUrl && elem !== undefined) {
+      const newName = getFileName(elem, originUrl);
 
-export const extractUrlsByTag = (html, origin, tag) => {
-  const $ = load(html);
-  const assets = $(tag);
-  return Array.from(assets)
-    .map((el) => $(el).attr(attrMapper[tag]))
-    .filter((url) => String(url).startsWith('/') || isFile(url))
-    .map((pathname) => (new URL(pathname, origin)).toString());
+      const promise = axios.get(href, { responseType: 'arraybuffer' })
+        .then((response) => fsp.writeFile(path.join(dirPath, newName), response.data))
+        .then(() => {
+          $(el).attr(attribute, path.join(dirN, newName));
+          const newFile = $.html();
+          return fsp.writeFile(fullPath, newFile);
+        });
+      promises.push({ title: newName, task: () => promise });
+    }
+
+    return null;
+  }));
+  const tasks = new Listr(promises, { concurrent: true });
+
+  return tasks.run();
 };

@@ -1,20 +1,17 @@
 import nock from 'nock';
-import fs from 'fs/promises';
 import { test, expect, beforeEach, beforeAll } from '@jest/globals';
 import { tmpdir } from 'os';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import fsp from 'fs/promises';
 import prettier from 'prettier';
-import { getFileName, getFilesDirName } from '../src/tools.js';
 import pageLoader from '../src/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const testingURL = 'https://ru.hexlet.io/courses';
-const filesDirName = getFilesDirName(getFileName(new URL(testingURL)));
 
 const getFixturePath = (filename) => join(__dirname, '..', '__fixtures__', filename);
-const readFixture = (filename) => fs.readFile(getFixturePath(filename), 'utf-8');
+const readFixture = (filename) => fsp.readFile(getFixturePath(filename), 'utf-8');
 
 nock.disableNetConnect();
 
@@ -34,7 +31,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  tmpDir = await fs.mkdtemp(join(tmpdir(), 'page-loader-'));
+  tmpDir = await fsp.mkdtemp(join(tmpdir(), 'page-loader-'));
 
   nock('https://ru.hexlet.io').get('/courses').reply(200, beforeHTML);
   nock('https://ru.hexlet.io').get('/assets/professions/nodejs.png').reply(200, expectedImage);
@@ -44,18 +41,18 @@ beforeEach(async () => {
 });
 
 test('1) Should return right file name "ru-hexlet-io-courses.html"', async () => {
-  await pageLoader(testingURL, tmpDir);
+  await pageLoader('https://ru.hexlet.io/courses', tmpDir);
 
-  const fileNamesArray = await fs.readdir(tmpDir);
+  const fileNamesArray = await fsp.readdir(tmpDir);
   const htmlFileName = fileNamesArray[0];
 
   expect(htmlFileName).toEqual('ru-hexlet-io-courses.html');
 });
 
 test('2) Should load page and change links', async () => {
-  await pageLoader(testingURL, tmpDir);
+  await pageLoader('https://ru.hexlet.io/courses', tmpDir);
 
-  const page = await fs.readFile(join(tmpDir, 'ru-hexlet-io-courses.html'), 'utf-8');
+  const page = await fsp.readFile(join(tmpDir, 'ru-hexlet-io-courses.html'), 'utf-8');
 
   const formatedPage = prettier.format(page, { parser: 'html', printWidth: Infinity });
   const formatedAfterHtml = prettier.format(afterHtml, { parser: 'html', printWidth: Infinity });
@@ -64,49 +61,50 @@ test('2) Should load page and change links', async () => {
 });
 
 test('3) Should create dir: "ru-hexlet-io-courses_files"', async () => {
-  await pageLoader(testingURL, tmpDir);
+  await pageLoader('https://ru.hexlet.io/courses', tmpDir);
 
-  const fullDirPath = join(tmpDir, filesDirName);
-  const stats = await fs.stat(fullDirPath);
-  const fileNamesArray = await fs.readdir(tmpDir);
+  const fullDirPath = join(tmpDir, 'ru-hexlet-io-courses_files');
+  const stats = await fsp.stat(fullDirPath);
+  const fileNamesArray = await fsp.readdir(tmpDir);
   const directoryName = fileNamesArray[1];
 
   expect(stats.isDirectory()).toBe(true);
-  expect(directoryName).toEqual(filesDirName);
+  expect(directoryName).toEqual('ru-hexlet-io-courses_files');
 });
 
 test('4) Should load img', async () => {
-  await pageLoader(testingURL, tmpDir);
-  const img = await fs.readFile(join(tmpDir, filesDirName, 'ru-hexlet-io-assets-professions-nodejs.png'), 'utf-8');
+  await pageLoader('https://ru.hexlet.io/courses', tmpDir);
+  const img = await fsp.readFile(join(tmpDir, 'ru-hexlet-io-courses_files', 'ru-hexlet-io-assets-professions-nodejs.png'), 'utf-8');
 
   expect(img).toEqual(expectedImage);
 });
 
 test('5) Should load css', async () => {
-  await pageLoader(testingURL, tmpDir);
-  const css = await fs.readFile(join(tmpDir, filesDirName, 'ru-hexlet-io-assets-application.css'), 'utf-8');
+  await pageLoader('https://ru.hexlet.io/courses', tmpDir);
+  const css = await fsp.readFile(join(tmpDir, 'ru-hexlet-io-courses_files', 'ru-hexlet-io-assets-application.css'), 'utf-8');
 
   expect(css).toEqual(expectedCss);
 });
 
 test('6) Should load script', async () => {
-  await pageLoader(testingURL, tmpDir);
-  const script = await fs.readFile(join(tmpDir, filesDirName, 'ru-hexlet-io-packs-js-runtime.js'), 'utf-8');
+  await pageLoader('https://ru.hexlet.io/courses', tmpDir);
+  const script = await fsp.readFile(join(tmpDir, 'ru-hexlet-io-courses_files', 'ru-hexlet-io-packs-js-runtime.js'), 'utf-8');
 
   expect(script).toEqual(expectedScript);
 });
 
-// test('7) Err: Directory is not exist', async () => {
-//   const notExistedDir = join(tmpdir(), '/not_existed_dir');
+test('7) Err: Directory is not exist', async () => {
+  const notExistedDir = join(tmpdir(), '/not_existed_dir');
 
-//   await expect(pageLoader(testingURL, notExistedDir)).rejects.toThrow('ENOENT');
-// });
+  await expect(pageLoader('https://ru.hexlet.io/courses', notExistedDir)).rejects.toThrow('ENOENT');
+});
 
 test('8) Err: Access error', async () => {
-  await expect(pageLoader(testingURL, '/sys')).rejects.toThrow('EACCES');
+  await expect(pageLoader('https://ru.hexlet.io/courses', '/sys')).rejects.toThrow('EACCES');
 });
 
 test('9) Err: 404', async () => {
   nock('https://hexlet.ru').get('/not_found_page').reply(404);
+
   await expect(pageLoader('https://hexlet.ru/not_found_page', tmpDir)).rejects.toThrow('Request failed with status code 404');
 });
