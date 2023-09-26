@@ -1,6 +1,6 @@
 import path from 'path';
-import axios from 'axios';
 import fsp from 'fs/promises';
+import axios from 'axios';
 import { load } from 'cheerio';
 import Listr from 'listr';
 
@@ -27,8 +27,7 @@ export const downloadResources = (html, dirPath, dirN, fullPath, originUrl) => {
   attrMapper.forEach(({ tag, attribute }) => $(tag).each((_index, el) => {
     const elem = $(el).attr(attribute);
 
-    const url = new URL(elem, originUrl);
-    const { href, origin } = url;
+    const { href, origin } = new URL(elem, originUrl);
 
     if (origin === originUrl && elem !== undefined) {
       const newName = getFileName(elem, originUrl);
@@ -45,7 +44,8 @@ export const downloadResources = (html, dirPath, dirN, fullPath, originUrl) => {
 
     return null;
   }));
-  const tasks = new Listr(promises, { concurrent: true });
+
+  const tasks = new Listr(promises, { concurrent: true, exitOnError: true });
 
   return tasks.run();
 };

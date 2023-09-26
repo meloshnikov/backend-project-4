@@ -1,13 +1,13 @@
-import 'axios-debug-log';
-import axios from 'axios';
+// import 'axios-debug-log';
 import fsp from 'fs/promises';
 import path from 'path';
+import axios from 'axios';
 import debug from 'debug';
 import { getFileName, downloadResources } from './tools.js';
 
 const logger = debug('page-loader');
 
-const pageLoader = (url, output = process.cwd()) => {
+const pageLoader = async (url, output = process.cwd()) => {
   logger(`URL: ${url}`);
   logger(`Download directory: ${output}`);
 
@@ -19,7 +19,7 @@ const pageLoader = (url, output = process.cwd()) => {
   const dirName = getFileName(url, origin).replace('.html', '_files');
   const fullDirPath = path.join(output, dirName);
 
-  return axios.get(url, {responseType: 'arraybuffer'})
+  return axios.get(url, { responseType: 'arraybuffer' })
     .then((response) => {
       logger('Write downloaded data to file');
       return fsp.writeFile(fullHtmlPath, response.data);

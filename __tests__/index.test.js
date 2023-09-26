@@ -1,9 +1,14 @@
-import nock from 'nock';
-import { test, expect, beforeEach, beforeAll } from '@jest/globals';
 import { tmpdir } from 'os';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import fsp from 'fs/promises';
+import nock from 'nock';
+import {
+  test,
+  expect,
+  beforeAll,
+  beforeEach,
+} from '@jest/globals';
 import prettier from 'prettier';
 import pageLoader from '../src/index.js';
 
