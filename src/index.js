@@ -3,20 +3,21 @@ import fs from 'fs/promises';
 import debug from 'debug';
 import axios from 'axios';
 import axiosDebugger from './axiosDebugger.js';
-import { logger } from './tools.js'
 import {
+  logger,
   getFileName,
   extractUrlsByTag,
   getPaths,
   replaceUrls,
   writeFile,
   downloadAssets,
+  getFilesDirName,
 } from './tools.js';
 
 const loadHtmlPage = async (url, output) => {
-  const { host, pathname, origin } = new URL(url);
-  const fileName = getFileName({ host, pathname });
-  const filesDirName = `${fileName}_files`;
+  const { origin } = new URL(url);
+  const fileName = getFileName(url);
+  const filesDirName = getFilesDirName(fileName);
   const htmlPath = path.join(output, `${fileName}.html`);
   const filesPath = path.join(output, filesDirName);
 
