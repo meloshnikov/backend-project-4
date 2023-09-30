@@ -27,9 +27,11 @@ export const downloadResources = async (html, dirPath, dirN, fullPath, originUrl
   attrMapper.forEach(({ tag, attribute }) => $(tag).each((_index, el) => {
     const elem = $(el).attr(attribute);
 
-    const { href, origin, hostname } = new URL(elem, originUrl);
+    const { host } = new URL(originUrl);
+    const originalDomain = host.split('.').slice(-2).join('.');
+    const { href, origin } = new URL(elem, originUrl);
 
-    if (origin.includes(hostname) && elem !== undefined) {
+    if (origin.includes(originalDomain) && elem !== undefined) {
       const newName = getFileName(elem, originUrl);
 
       const promise = axios.get(href, { responseType: 'arraybuffer' })

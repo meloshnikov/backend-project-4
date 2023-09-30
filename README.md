@@ -24,11 +24,11 @@
 		  <li>
 		  	<p>Installation</p>
 		  	</li>
-		  	<pre>$git clone https://github.com/meloshnikov/backend-project-4.git</br>$make install</pre>
+		  	<pre>$git clone https://github.com/meloshnikov/backend-project-4.git</br>$make install</br>$npm link</pre>
 		  <li> <p>Check of launch </p>
 		  	</li>
-		  	<pre>$npx gendiff</pre>
+		  	<pre>$page-loader -o PATH_TO_DIRECTORY YOUR_URL</pre>
 		</ul>
 		<p align="center">
-		<a href="https://asciinema.org/link" target="_blank"><img src="https://asciinema.org/a/Xgyp3J0wsRWQOc4m6YhD3udoG.svg" width="80%"/></a>
+		<a href="https://asciinema.org/a/603355" target="_blank"><img src="https://asciinema.org/a/603355.svg" width="80%" /></a>
 		</p>
