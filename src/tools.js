@@ -20,16 +20,16 @@ export const getFileName = (url, origin) => {
   return extension ? `${newName}${extension}` : `${newName}.html`;
 };
 
-export const downloadResources = (html, dirPath, dirN, fullPath, originUrl) => {
+export const downloadResources = async (html, dirPath, dirN, fullPath, originUrl) => {
   const $ = load(html);
   const promises = [];
 
   attrMapper.forEach(({ tag, attribute }) => $(tag).each((_index, el) => {
     const elem = $(el).attr(attribute);
 
-    const { href, origin } = new URL(elem, originUrl);
+    const { href, origin, hostname } = new URL(elem, originUrl);
 
-    if (origin === originUrl && elem !== undefined) {
+    if (origin.includes(hostname) && elem !== undefined) {
       const newName = getFileName(elem, originUrl);
 
       const promise = axios.get(href, { responseType: 'arraybuffer' })
@@ -45,7 +45,7 @@ export const downloadResources = (html, dirPath, dirN, fullPath, originUrl) => {
     return null;
   }));
 
-  const tasks = new Listr(promises, { concurrent: true, exitOnError: true });
+  const tasks = new Listr(promises, { concurrent: true, exitOnError: false });
 
-  return tasks.run();
+  return tasks.run().catch((err) => err.message);
 };
